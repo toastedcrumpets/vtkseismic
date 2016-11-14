@@ -66,33 +66,28 @@ bool SegyReader::ExportData3D(vtkImageData *imageData)
 {
 
     set<int> crosslineNumbers, inlineNumbers;
+    int minCrossLineNumber;
+    int maxCrossLineNumber;
+    int crosslineNum;
+
     for(auto trace : data)
     {
         crosslineNumbers.insert(trace->crosslineNumber);
+        crosslineNum = trace->crosslineNumber;
+        minCrossLineNumber = minCrossLineNumber < crosslineNum ? minCrossLineNumber : crosslineNum;
+        maxCrossLineNumber = maxCrossLineNumber > crosslineNum ? maxCrossLineNumber : crosslineNum;
         inlineNumbers.insert(trace->inlineNumber);
     }
 
-    if(crosslineNumbers.size() < 3 || inlineNumbers.size() < 3)
-    {
-        return false;
-    }
+    int crossLineNumberStep = 1;
+    int crosslineNumberCount = (maxCrossLineNumber - minCrossLineNumber) / crossLineNumberStep + 1;
 
-    map<int, vector<Trace*> > cross_inline_map;
 
     float min_data = INT_MAX;
     float max_data = INT_MIN;
 
     for(auto trace : data)
     {
-        int cross = trace->crosslineNumber;
-        auto pair = cross_inline_map.find(cross);
-        if( pair == cross_inline_map.end() )
-        {
-            cross_inline_map.insert(make_pair(cross, vector<Trace*>()));
-        }
-        pair = cross_inline_map.find(cross);
-        pair->second.push_back(trace);
-
         for(auto m : trace->data)
         {
             if(m < min_data)
@@ -102,20 +97,9 @@ bool SegyReader::ExportData3D(vtkImageData *imageData)
         }
     }
 
-    int crossLineCount = cross_inline_map.size();
 
-    int inlineCount = INT_MAX;
-    for(auto pair : cross_inline_map)
-    {
-        int count = pair.second.size();
-        if(count < 3)
-            return false;
 
-        if(count < inlineCount)
-            inlineCount = count;
-    }
-
-    imageData->SetDimensions(inlineCount, crossLineCount, sampleCountPerTrace);
+    imageData->SetDimensions(sampleCountPerTrace, crosslineNumberCount, 1 );
 
     int type = VTK_FLOAT;
     imageData->SetScalarType(type, imageData->GetInformation());
@@ -123,29 +107,57 @@ bool SegyReader::ExportData3D(vtkImageData *imageData)
     imageData->AllocateScalars(type, 1);
     float *ptr=(float *)imageData->GetScalarPointer();
 
-    cout << "sample count per trace : " << sampleCountPerTrace << endl;
-    cout << "cross line count: " << crossLineCount << endl;
-    cout << "inline count: " << inlineCount << endl;
 
-    cout << "min_data" << min_data << endl;
-    cout << "max_data" << max_data << endl;
+    for (int k = 0; k < sampleCountPerTrace; k++) {
+            for (int i = 0; i < crosslineNumberCount; i++) {
 
-    int i = 0;
-    for(auto crossIter = cross_inline_map.begin(); crossIter != cross_inline_map.end(); crossIter++)
-    {
-        for (int j = 0; j < inlineCount; j++)
-        {
-            for (int k = 0; k < sampleCountPerTrace; k++)
-            {
-                float normalizedData = (crossIter->second[j]->data[k] - min_data) * 255.0 / (max_data - min_data) ;
-
-                *(ptr + k * crossLineCount * inlineCount + i * inlineCount + j) = normalizedData;
+                *(ptr + i * sampleCountPerTrace + k) =
+                        data[i]->data[k];
             }
-        }
-        i++;
-    }
+  }
+
 
     return true;
+}
+
+
+bool SegyReader::GetImageData(vtkImageData *imageData)
+{
+  int crosslineNum;
+  int minCrossLineNumber = INT_MAX;
+  int maxCrossLineNumber = INT_MIN;
+
+  for(auto trace : data)
+  {
+      crosslineNum = trace->crosslineNumber;
+      if (crosslineNum == 0)
+                  break;
+      minCrossLineNumber = minCrossLineNumber < crosslineNum ? minCrossLineNumber : crosslineNum;
+      maxCrossLineNumber = maxCrossLineNumber > crosslineNum ? maxCrossLineNumber : crosslineNum;
+  }
+
+  int crossLineNumberStep = 1;
+  int crosslineNumberCount = (maxCrossLineNumber - minCrossLineNumber) / crossLineNumberStep + 1;
+
+  int type = VTK_FLOAT;
+  imageData->SetDimensions(sampleCountPerTrace, crosslineNumberCount, 1 );
+  imageData->SetScalarType(type, imageData->GetInformation());
+  imageData->SetNumberOfScalarComponents(1, imageData->GetInformation());
+  imageData->AllocateScalars(type, 1);
+
+  float *ptr=(float *)imageData->GetScalarPointer();
+
+
+  for (int k = 0; k < sampleCountPerTrace; k++)
+  {
+        for (int i = 0; i < crosslineNumberCount; i++)
+        {
+          *(ptr + i * sampleCountPerTrace + k) = data[i]->data[k];
+        }
+  }
+
+
+  return true;
 }
 
 
