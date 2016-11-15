@@ -159,50 +159,55 @@ bool SegyReader::GetImageData(vtkImageData *imageData)
       }
   }
 
+  std::cerr << "min " << min_data << " " << max_data << std::endl;
 
   float *ptr=(float *)imageData->GetScalarPointer();
 
   int index = 0;
-  int result;
+  int diff;
   int remainder = 0;
+  int dataSize = 0;
+
+//  vector<float> aggData;
+//  for(auto trace : data)
+//  {
+//    for(auto d: trace->data)
+//    {
+//      aggData.push_back(256.0 * (d - min_data) / (max_data - min_data));
+//    }
+//  }
+
   for (int k = 0; k < sampleCountPerTrace; k++)
   {
-        for (int i = 0; i < crosslineNumberCount; i++)
+      for (int i = 0; i < crosslineNumberCount; i++)
+      {
+        int aggIndex = i * sampleCountPerTrace + k;
+
+        index = 0;
+        remainder = 0;
+
+        for(auto trace : data)
         {
-//          std::cerr << "data.size " << data.size() << std::endl;
-//          std::cerr << "sampleCountPerTrace " << sampleCountPerTrace << std::endl;
-//          std::cerr << "crosslineNumberCount " << crosslineNumberCount << std::endl;
-//          std::cerr << "k " << k << std::endl;
-          int mm = i * sampleCountPerTrace + k;
+          dataSize = trace->data.size();
+          diff = aggIndex - dataSize;
 
-          index = 0;
-          remainder = 0;
-
-            for(auto trace : data)
-            {
-              result = mm - trace->data.size();
-//              std::cerr << "mm " << mm << std::endl;
-//              std::cerr << "index " << index << std::endl;
-//              std::cerr << "index * trace->data.size() " << index * trace->data.size() << std::endl;
-
-              if (result > 0)
-              {
-                ++index;
-                mm = result;
-              }
-              else
-              {
-                remainder = mm % trace->data.size();
-                if (remainder >= 1) {
-                  remainder = remainder - 1;
-                }
-                break;
-              }
-            }
-
-          std::cerr << "index " << index << " " << remainder << " " << 256.0 * (data[index]->data[remainder] - min_data)/(max_data - min_data) << std::endl;
-          *(ptr + i * sampleCountPerTrace + k) = 256.0 * (data[index]->data[remainder] - min_data)/(max_data - min_data);
+          if (diff > 0)
+          {
+            ++index;
+            aggIndex = diff;
+          }
+          else
+          {
+            remainder = aggIndex % dataSize;
+            break;
+          }
         }
+
+//        std::cerr << "index " << index << " " << remainder << " " << 256.0 * (data[index]->data[remainder] - min_data)/(max_data - min_data) << std::endl;
+        *(ptr + i * sampleCountPerTrace + k) = 256.0 * (data[index]->data[remainder] - min_data)/(max_data - min_data);
+
+//        *(ptr + i * sampleCountPerTrace + k) = aggData[aggIndex];
+      }
   }
 
 
@@ -315,7 +320,7 @@ bool SegyReader::ExportData2D(vtkPolyData * polyData)
     polyData->SetPoints(points);
     polyData->SetPolys(quads);
     this->AddScalars(polyData);
-    // polyData->GetPointData()->SetTCoords(textureCoordinates);
+     polyData->GetPointData()->SetTCoords(textureCoordinates);
 
     vtkNew<vtkXMLPolyDataWriter> writer;
     writer->SetInputData(polyData);
