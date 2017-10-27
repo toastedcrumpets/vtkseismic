@@ -21,7 +21,7 @@
 #include <vtkSmartPointer.h>
 #include <vtkPolygon.h>
 #include <vtkStructuredPointsReader.h>
-#include <vtkVolumeTextureMapper3D.h>
+#include <vtkGPUVolumeRayCastMapper.h>
 #include <vtkColorTransferFunction.h>
 #include <vtkRenderWindow.h>
 #include <vtkAxesActor.h>

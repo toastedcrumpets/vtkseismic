@@ -17,6 +17,7 @@
 #define SEGYVISUALIZER2D_IOUTIL_H
 
 #include <fstream>
+#include <Windows.h>
 using namespace std;
 
 class IOUtil {
@@ -39,7 +40,7 @@ private:
     IOUtil();
     static IOUtil* instance;
     bool checkIfBigEndian() {
-        ushort a = 0x1234;
+        unsigned short a = 0x1234;
         if (*((unsigned char *) &a) == 0x12)
             return true;
         return false;

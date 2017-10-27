@@ -22,8 +22,11 @@ using namespace std;
 #include <vtkColorTransferFunction.h>
 #include <vtkPiecewiseFunction.h>
 #include <vtkRenderer.h>
+#include <vtkOpenVRRenderer.h>
 #include <vtkRenderWindow.h>
+#include <vtkOpenVRRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
+#include <vtkOpenVRRenderWindowInteractor.h>
 #include <vtkVolumeProperty.h>
 #include <vtkAxesActor.h>
 #include <vtkImageShiftScale.h>
@@ -40,6 +43,7 @@ using namespace std;
 #include <vtkProperty.h>
 #include <vtkAxesActor.h>
 #include <vtkCamera.h>
+#include <vtkOpenVRCamera.h>
 #include <vtkImageMapToColors.h>
 #include <vtkWindowLevelLookupTable.h>
 #include "vtkSeismicSliceWidget.h"
@@ -76,6 +80,18 @@ using namespace std;
 #include <vtkInformationVector.h>
 
 #include "SegyReader.h"
+
+
+//typedef vtkRenderer Renderer_t;
+//typedef vtkRenderWindow RenderWindow_t;
+//typedef vtkOpenVRRenderWindowInteractor RenderWindowInteractor_t;
+
+typedef vtkOpenVRRenderer Renderer_t;
+typedef vtkOpenVRRenderWindow RenderWindow_t;
+typedef vtkOpenVRRenderWindowInteractor RenderWindowInteractor_t;
+
+
+typedef vtkCamera Camera_t;
 
 void expandBounds(double* bounds)
 {
@@ -130,15 +146,15 @@ void render(vtkImageData* id)
     volume->SetProperty(volumeProperty);
 
 
-    vtkSmartPointer<vtkRenderer> renderer =
-      vtkSmartPointer<vtkRenderer>::New();
+    vtkSmartPointer<Renderer_t> renderer =
+      vtkSmartPointer<Renderer_t>::New();
 
-    vtkSmartPointer<vtkRenderWindow> renwin =
-      vtkSmartPointer<vtkRenderWindow>::New();
+    vtkSmartPointer<RenderWindow_t> renwin =
+      vtkSmartPointer<RenderWindow_t>::New();
     renwin->AddRenderer(renderer);
 
-    vtkSmartPointer<vtkRenderWindowInteractor> interactor =
-      vtkSmartPointer<vtkRenderWindowInteractor>::New();
+    vtkSmartPointer<RenderWindowInteractor_t> interactor =
+      vtkSmartPointer<RenderWindowInteractor_t>::New();
     interactor->SetRenderWindow(renwin);
 
 
@@ -154,7 +170,7 @@ void render(vtkImageData* id)
     cubeAxesActor->SetBounds(expandedBounds);
     renderer->AddActor(cubeAxesActor);
 
-    vtkCamera* camera = renderer->GetActiveCamera();
+    Camera_t* camera = renderer->GetActiveCamera();
     camera->SetFocalPoint( volume->GetCenter() );
     camera->SetPosition(0, 0, -50);
 
@@ -198,6 +214,10 @@ void render(vtkImageData* id)
     volumeMapper->AddClippingPlane(sliceWidgetX->GetPlane());
     volumeMapper->AddClippingPlane(sliceWidgetY->GetPlane());
 
+	// Without the next line volume rendering in VR does not work
+	renwin->SetMultiSamples(0);
+
+
     renwin->Render();
 
     interactor->Start();
@@ -213,13 +233,13 @@ void demo2D()
     colorTransferFunction->AddRGBPoint(192.0, 0.0, 1.0, 0.0);
     colorTransferFunction->AddRGBPoint(255.0, 0.0, 0.2, 0.0);
 
-    vtkSmartPointer<vtkRenderer> renderer =
-            vtkSmartPointer<vtkRenderer>::New();
-    vtkSmartPointer<vtkRenderWindow> renderWindow =
-            vtkSmartPointer<vtkRenderWindow>::New();
+    vtkSmartPointer<Renderer_t> renderer =
+            vtkSmartPointer<Renderer_t>::New();
+    vtkSmartPointer<RenderWindow_t> renderWindow =
+            vtkSmartPointer<RenderWindow_t>::New();
     renderWindow->AddRenderer(renderer);
-    vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor =
-            vtkSmartPointer<vtkRenderWindowInteractor>::New();
+    vtkSmartPointer<RenderWindowInteractor_t> renderWindowInteractor =
+            vtkSmartPointer<RenderWindowInteractor_t>::New();
     renderWindowInteractor->SetRenderWindow(renderWindow);
 
     vector<string> files;
@@ -255,13 +275,15 @@ void demo2D()
 
         renderer->AddActor(actor);
 
-        vtkCamera* camera = renderer->GetActiveCamera();
+        Camera_t* camera = renderer->GetActiveCamera();
         camera->SetViewUp(0, 0, 1.);
         camera->SetPosition(1, 0, 0);
         camera->SetFocalPoint(-1, 0, 0);
         renderer->ResetCamera();
     }
 
+	// Without the next line volume rendering in VR does not work
+	renderWindow->SetMultiSamples(0);
 
     renderWindow->Render();
     renderWindowInteractor->Start();
@@ -318,15 +340,15 @@ void demoRDV()
     actor->SetMapper(mapper);
 
     auto renderer =
-      vtkSmartPointer<vtkRenderer>::New();
+      vtkSmartPointer<Renderer_t>::New();
     renderer->AddActor(actor);
 
     auto window =
-      vtkSmartPointer<vtkRenderWindow>::New();
+      vtkSmartPointer<RenderWindow_t>::New();
     window->AddRenderer(renderer);
 
     auto interactor =
-      vtkSmartPointer<vtkRenderWindowInteractor>::New();
+      vtkSmartPointer<RenderWindowInteractor_t>::New();
     interactor->SetRenderWindow(window);
 
     vtkSmartPointer<vtkCubeAxesActor> cubeAxesActor =
@@ -340,7 +362,7 @@ void demoRDV()
     cubeAxesActor->SetBounds(expandedBounds);
     renderer->AddActor(cubeAxesActor);
 
-    vtkCamera* camera = renderer->GetActiveCamera();
+    Camera_t* camera = renderer->GetActiveCamera();
     camera->SetFocalPoint( polyData->GetCenter() );
     camera->SetPosition(0, 0, -50);
 
@@ -348,6 +370,9 @@ void demoRDV()
       vtkSmartPointer<vtkScalarBarActor>::New();
     scalarBar->SetLookupTable(colorTransferFunction);
     renderer->AddActor(scalarBar);
+
+	// Without the next line volume rendering in VR does not work
+	window->SetMultiSamples(0);
 
     window->Render();
     interactor->Start();
